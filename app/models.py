@@ -35,11 +35,13 @@ class FileShare(SQLModel, table=True):
 
 
 class Usage(SQLModel, table=True):
-    id: Optional[int] = Field(default=None, primary_key=True)
-    owner_id: int = Field(foreign_key="user.id")
-    recipient_id: int = Field(foreign_key="user.id")
+    # composite primary key: owner_id + recipient_id
+    owner_id: int = Field(primary_key=True, index=True)
+    recipient_id: int = Field(primary_key=True, index=True)
+
     total_bytes: int = Field(default=0)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
+    updated_at: datetime = Field(default_factory=datetime.utcnow, nullable=False)
 
 
 class RevokedToken(SQLModel, table=True):

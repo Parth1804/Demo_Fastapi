@@ -139,16 +139,28 @@ async def get_usage(
     q = select(Usage).where(Usage.owner_id == owner_id, Usage.recipient_id == recipient_id)
     res = await db.exec(q)
 
-    # Compatibility-safe extraction:
-    # - If result supports scalar_one_or_none(), use it
-    # - Otherwise fall back to scalars().first()
-    try:
-        # preferred (if available)
-        record = res.scalar_one_or_none()
-    except AttributeError:
-        # fallback for environments where scalar_one_or_none isn't present
+    # Compatibility-safe extraction across SQLAlchemy/SQLModel versions.
+    # Different versions expose different result APIs (scalar_one_or_none,
+    # one_or_none, scalars().first(), first()). Try them in a safe order.
+    record = None
+    if hasattr(res, "scalar_one_or_none"):
+        try:
+            record = res.scalar_one_or_none()
+        except Exception:
+            record = None
+    if record is None and hasattr(res, "one_or_none"):
+        try:
+            record = res.one_or_none()
+        except Exception:
+            record = None
+    if record is None and hasattr(res, "scalars"):
         try:
             record = res.scalars().first()
+        except Exception:
+            record = None
+    if record is None and hasattr(res, "first"):
+        try:
+            record = res.first()
         except Exception:
             record = None
 
