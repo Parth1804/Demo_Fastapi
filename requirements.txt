@@ -1,0 +1,14 @@
+fastapi>=0.95
+uvicorn[standard]>=0.22
+sqlmodel>=0.0.8
+asyncpg>=0.27
+python-dotenv>=1.0
+passlib[bcrypt]>=1.7
+python-jose[cryptography]>=3.3
+python-multipart>=0.0.6
+pillow>=10.0
+alembic>=1.11
+httpx>=0.24
+pytest>=7.0
+nsfw-detector>=1.1 
+nsfw_image_detector>=0.1.2
