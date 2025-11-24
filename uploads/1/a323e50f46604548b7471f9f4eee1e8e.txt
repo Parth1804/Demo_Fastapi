@@ -1,0 +1,95 @@
+Today i learn about Callback Hell, Promises and the Fetch API, Consuming Promises, Chaining Promises, Handling Rejected Promises, Asynchronous Behind the Scenes The Event Loop, The Event Loop in Practice, Building a Simple Promise, Consuming Promises with Async Await, Error Handling With try...catch, Returning Values from Async Functions.
+
+Today i learn about An Overview of Modern JavaScript Development, The Module Pattern Modules in JavaScript, Exporting and Importing in ES6 Modules, introduction to CLI, intro to NPM, NPM Script, Data Structures codding practice, Java asynchronous practice and OOP.
+
+Today i learn about Loading from API, Rendering, Listening For load and hashchange Events, The MVC Architecture, Refactoring for MVC, elpers and Configuration Files, Implementing Error and Success Messages, Searching, Pagination.
+
+Today i learned about JavaScript The Advanced Concepts which include, JavaScript Foundation,  JavaScript Foundation II, Types in JavaScript and functions.
+
+Today i have completed the ES6 module.
+
+Today i again learned about all JS important concepts like map, set, array, OOP, and revise all topics. 
+
+Today i have given exam of Java Script then started learning about Git/GitHub and in it i have done with basic intro, commands.
+
+Today i have learn about staging changes with git add, git log command for logging commits, git commit command for commit changes in detail, working with branches which includes create, switch, delete, rename, merging branches in both CLI and GUI and comparing changes with git diff.
+
+Today i have learn about git fetch, pull(practice), Adding GitHub Collaborators, READMEs, Markdown, GitHub Gists, Git Collaboration Workflows, Rebasing, History Modification, Git Tags.
+
+Today i have give exam of git/GitHub, and start learning about Linux commands.
+
+Today i have learn about all important Linux commands which includes networking commands, file transfer commands, User and group management commands, and started learning docker and finished the introduction about docker also about docker files, images, containers, networks, volumes management and docker compose.
+
+Today, I learn about Kubernetes which includes Introduction & overview of k8s concept, Monolithic vs Microservices, k8s architecture, Kubectl, Create k8s architecture by own, What is minikube Cluster , installation , Cluster creation, Namespaces, Pods, ReplicaSet vs StatefulSet vs Deployments, Lables and Selectors, Rolling update in Deployment, Replicaset, Daemonset, jobs, cronjobs, storage, PV, PVC, and services.
+
+Today, I learn about Ingress, Annotations, StatefulSets, ConfigMaps, Secrets, Resource Quotas and Limits, Probes, Taints/Tolerations, HPA, VPA, Node Affinity, and RBAC. I also explored monitoring and logging using the Kubernetes dashboard, Custom Resource Definitions, Operators, Helm. Additionally, I completed practical projects, including a 3-tier Chat Application on Minikube and started learning about AWS. 
+
+Today, i learn about all AWS services which includes EC2, S3, CloudFront, RDS, DynamoDB, EBS, ELB, ASG, Lamda, VPC etc. and started learning about Google Cloud. 
+
+Today, I learn about python which includes modules, commenting, variables, datatypes, strings, lists, tuples, dictionary, sets, conditional expression, loops and functions.
+
+Today, I learn about advance python concepts which includes recursion, file i/o, OOPs concepts, := operator, types definition, match case, dictionary merge and update operator, exception handling, __main__, pip freeze, lamda function, join, formate methods, map filter and reduce methods.
+
+Today, I learned about URLs, Views, and Routing, Function Based Views, Dynamic Views, Routing Logic, Redirects Basics, Reverse URLs and URL Names, and Connecting a View to a Template, Template Directories, Variables in Templates, Filters, For Loops, If/Elif/Else, Tags and URL Names in Templates, Template Inheritance, Custom Error Templates, and Static Files.
+
+Today, I learned about Django models, views, databases, migrations, CRUD operations using ORM, queries like .all(), filter(), and get(), connecting models to the UI.
+
+
+Today, I learn about Django Admin setup, admin-model integration, and covered Django Forms including GET/POST, CSRF, form classes, template rendering, widgets, styling, ModelForm customization, Introduction to Class Based Views, TemplateView, FormView, CreateView, ListView, DetailView, UpdateView, DeleteView, Project Skeleton, and Model setup.
+
+Today, I learn about authentication, User Registration and Forms and make project using all concepts.
+
+
+Implemented user authentication feature including views, templates, and logic for successful login and signup.
+
+
+Today, I complete the remaining features of Ecom app and make notes app and start learning about DRF and test notes api on postman.
+
+
+Today I learned how to build a FastAPI app with endpoints to create, read, update, and delete books using Pydantic models, query/path parameters, and custom validation, Status Codes Overview, HTTP Exceptions, Explicit Status Code Responses.
+
+
+Today, I have connect my fastapis with database in which i have make config.py, model.py, schema.py routes.py, database.py files and learn about database relationships.
+
+Today, I built a FastAPI app with SQLAlchemy, implemented CRUD operations, used Pydantic models, and learned to handle authentication with Jose, JWT, manage sessions, and structure routers for clean API design.
+
+
+
+Today, I learn about basic code or reusable code blocks for authentication and authorization through which we can make multiple dependency injections and start learning about how to connect PostgreSQL with fastAPI.
+
+
+Today, I have make project by the use of react, Fastapi and PostgreSQL and study the database behavior in pgadmin, learn alembic, Alembic in CI/CD Pipelines, differentiate routes and endpoints, versioning in api, and about pagination. 
+
+
+Today, I have make one full-stack Project for inventory management in which i have completed the backend part , implemented authentication and authorization and started frontend part.
+
+
+
+Today, I implement entire frontend of my project which is remaining, get the knowledge about how pytest and WebSocket works with fastapi and user verification through email.
+
+Today, I implement pytest for my project , used docker for containerization and then by the use of Jenkins I've implement the CI/CD , for that i have generated one access token of GitHub and then integrate this credential in Jenkins server to connect Jenkins with GitHub and in addition i learn about file requests, middleware, background tasks and make one project which takes .csv file.
+
+
+Today i have worked on my project ui to merge both .csv file and database data, fastapi cookies and header, annotated parameters, docker for fastapi, render for deploying projects.
+
+
+Today, I learn about middleware, CORS, async/await, background tasks, Custom response, and make one final project which covers all concepts of fastapi like routing, Pydantic validation, dependency, authentication, authorization, async database, ORM, relationships, CRUD operations, middleware, background tasks, file uploading, application startup events, CORS handling, error handling, unit testing with pytest also ingrate docker, PostgreSQL.
+
+
+Today, I complete fastapi and started learning about flask, gone through its documentation, learn about routes and database. 
+
+
+Today, I learned about routes, filters in templates to manipulate backend data, how to redirect from one URL to another, forms, file handling(upload, read its content and display, download, store uploaded file) and handle post request for JSON data and make the project which covers all this concepts.
+
+
+Today i have learn about sessions, cookies, database, sqlalchemy, PostgreSQL, cookies consent, and practice all of these concepts by making small project.
+
+
+Today, I learn about User Authentication, Role Base Access Control, Blue-Print, Flask-login, JWT Auth, Secure Session cookies and make project related to these concepts.
+
+Today, I complete learning about flask, and make project of FASTAPI + REACT for revise and learn about react.
+
+
+Today, I revise all python framework and started learning Machine Learning.
+
+Today, I learn about linear regression and for that i learn pandas, numpy, and started sklearn.

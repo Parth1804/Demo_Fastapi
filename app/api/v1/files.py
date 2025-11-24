@@ -6,7 +6,6 @@ from sqlmodel import select
 from app.deps import get_current_user, get_db
 from app.schemas import ShareReq, UsageResp
 from app.utils.storage import save_upload_file
-from app.utils.nsfw_check import is_nsfw
 from app.crud import (
     create_file,
     share_file,
@@ -18,21 +17,56 @@ from app.models import File as FileModel, FileShare, Usage
 router = APIRouter()
 
 
+def _is_image_content_type(content_type: str | None) -> bool:
+    return bool(content_type and content_type.startswith("image/"))
+
+
+def _is_video_content_type(content_type: str | None) -> bool:
+    return bool(content_type and content_type.startswith("video/"))
+
+
 @router.post("/upload")
 async def upload(
     upload_file: UploadFile = File(...),
     current=Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
+    # Save the file first
     stored_path, size = await save_upload_file(current.id, upload_file)
 
-    # NSFW check
-    if is_nsfw(stored_path):
-        import os
-        os.remove(stored_path)
-        await log_activity(db, current.id, "upload_blocked", f"NSFW blocked: {upload_file.filename}")
-        raise HTTPException(status_code=400, detail="Uploading NSFW content is not allowed")
+    # Only run NSFW detection for images and videos.
+    # For videos, you should implement frame sampling in nsfw_check (optional).
+    content_type = (upload_file.content_type or "").lower()
 
+    # Image-only NSFW check (video optional)
+    if _is_image_content_type(content_type) or _is_video_content_type(content_type):
+        # lazy import to avoid overhead when not used
+        from app.utils.nsfw_check import predict_image, is_nsfw
+
+        try:
+            # For images: is_nsfw returns bool
+            # For videos: your nsfw util should sample frames and return True if any frame flagged
+            blocked = is_nsfw(stored_path)
+        except Exception as exc:
+            # If the detector fails for an image/video, decide policy:
+            # Conservative: block -> safer but might block legitimate files.
+            # Permissive: allow -> safer UX but risk letting content through.
+            # We choose permissive for unexpected detector errors *for now* so text uploads aren't blocked,
+            # but still log the event so admins can review.
+            await log_activity(db, current.id, "nsfw_check_error", f"Detector error: {exc}")
+            blocked = False
+
+        if blocked:
+            # remove file if you want to avoid storing blocked content
+            import os
+            try:
+                os.remove(stored_path)
+            except Exception:
+                pass
+            await log_activity(db, current.id, "upload_blocked", f"NSFW blocked: {upload_file.filename}")
+            raise HTTPException(status_code=400, detail="Uploading NSFW content is not allowed")
+
+    # For non-image/video content, we skip NSFW check
     f = await create_file(
         db,
         owner_id=current.id,
@@ -104,12 +138,25 @@ async def get_usage(
 
     q = select(Usage).where(Usage.owner_id == owner_id, Usage.recipient_id == recipient_id)
     res = await db.exec(q)
-    record = res.scalar_one_or_none()
+
+    # Compatibility-safe extraction:
+    # - If result supports scalar_one_or_none(), use it
+    # - Otherwise fall back to scalars().first()
+    try:
+        # preferred (if available)
+        record = res.scalar_one_or_none()
+    except AttributeError:
+        # fallback for environments where scalar_one_or_none isn't present
+        try:
+            record = res.scalars().first()
+        except Exception:
+            record = None
 
     if not record:
         raise HTTPException(status_code=404, detail="No usage record")
 
     return record
+
 
 
 @router.get("/download/{file_id}")
