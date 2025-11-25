@@ -14,6 +14,11 @@ class UserCreate(BaseModel):
     password: str
 
 
+class AdminUserCreate(UserCreate):
+    # Allow admin to optionally set role when creating a user (eg. 'admin' or 'user')
+    role: Optional[str] = None
+
+
 class UserRead(BaseModel):
     id: int
     email: EmailStr

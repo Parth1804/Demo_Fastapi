@@ -29,3 +29,7 @@ async def startup_event():
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+# email: you@domain.com        
+#   username: yourname
+#   password: S3cure!

@@ -11,9 +11,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 from datetime import datetime
 
 
-# -------------------------
 # User helpers
-# -------------------------
 async def create_user(
     session: AsyncSession, *, email: str, username: str, hashed_password: str, role: str = "user"
 ) -> User:
@@ -34,9 +32,8 @@ async def get_user_by_id(session: AsyncSession, user_id: int) -> User | None:
     return await session.get(User, user_id)
 
 
-# -------------------------
+
 # File helpers
-# -------------------------
 async def create_file(
     session: AsyncSession,
     owner_id: int,
@@ -60,9 +57,7 @@ async def create_file(
     return f
 
 
-# -------------------------
 # Sharing / Usage
-# -------------------------
 async def share_file(
     session: AsyncSession,
     file_id: int,
@@ -97,9 +92,7 @@ async def share_file(
     return s
 
 
-# -------------------------
 # Activity & token revocation
-# -------------------------
 async def log_activity(session: AsyncSession, user_id: int, action: str, details: str | None = None):
     a = ActivityLog(user_id=user_id, action=action, details=details)
     session.add(a)

@@ -8,7 +8,7 @@ class User(SQLModel, table=True):
     email: str = Field(index=True, unique=True)
     username: str
     hashed_password: str
-    role: str = Field(default="user")  # 'user' or 'admin'
+    role: str = Field()  # 'user' or 'admin'
     is_active: bool = Field(default=True)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 

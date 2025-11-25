@@ -2,11 +2,11 @@ from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel.ext.asyncio.session import AsyncSession
-from sqlmodel import select
+from sqlmodel import select, delete
 
 from app.deps import require_admin, get_db
-from app.models import ActivityLog, FileShare, User
-from app.schemas import UserRead, UserCreate
+from app.models import ActivityLog, FileShare, User, File
+from app.schemas import UserRead, UserCreate, AdminUserCreate
 from app.crud import create_user
 from app.core.security import get_password_hash
 
@@ -20,16 +20,6 @@ async def activity_log(
     admin=Depends(require_admin)
 ):
     q = select(ActivityLog).order_by(ActivityLog.created_at.desc()).limit(limit)
-    result = await db.exec(q)
-    return result.all()
-
-
-@router.get("/shares")
-async def shares(
-    db: AsyncSession = Depends(get_db),
-    admin=Depends(require_admin)
-):
-    q = select(FileShare).order_by(FileShare.shared_at.desc()).limit(200)
     result = await db.exec(q)
     return result.all()
 
@@ -53,10 +43,12 @@ async def get_user(user_id: int, db: AsyncSession = Depends(get_db), admin=Depen
 
 
 @router.post("/users", response_model=UserRead)
-async def admin_create_user(u: UserCreate, db: AsyncSession = Depends(get_db), admin=Depends(require_admin)):
+async def admin_create_user(u: AdminUserCreate, db: AsyncSession = Depends(get_db), admin=Depends(require_admin)):
     # create_user helper expects hashed password
     hashed = get_password_hash(u.password)
-    user = await create_user(db, email=u.email, username=u.username, hashed_password=hashed)
+    # If admin provided a role, allow it; otherwise default to 'user'
+    role = getattr(u, "role", None) or "user"
+    user = await create_user(db, email=u.email, username=u.username, hashed_password=hashed, role=role)
     return user
 
 
@@ -82,6 +74,9 @@ async def admin_delete_user(user_id: int, db: AsyncSession = Depends(get_db), ad
     user = await db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
+    await db.exec(delete(ActivityLog).where(ActivityLog.user_id == user_id))
+    await db.exec(delete(FileShare).where((FileShare.owner_id == user_id) | (FileShare.recipient_id == user_id)))
+    await db.exec(delete(File).where(File.owner_id == user_id))
     await db.delete(user)
     await db.commit()
     return {"ok": True}
