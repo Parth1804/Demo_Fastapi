@@ -1,3 +1,5 @@
+import os
+import tempfile
 from fastapi import APIRouter, Depends, UploadFile, File, HTTPException
 from fastapi.responses import FileResponse
 from sqlmodel.ext.asyncio.session import AsyncSession
@@ -5,7 +7,7 @@ from sqlmodel import select
 
 from app.deps import get_current_user, get_db
 from app.schemas import ShareReq, UsageResp
-from app.utils.storage import save_upload_file
+from app.utils.storage import save_upload_file, upload_file_to_cloudinary
 from app.crud import (
     create_file,
     share_file,
@@ -13,6 +15,7 @@ from app.crud import (
     get_user_by_email
 )
 from app.models import File as FileModel, FileShare, Usage
+from app.core.config import settings
 
 router = APIRouter()
 
@@ -31,58 +34,125 @@ async def upload(
     current=Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
-    # Save the file first
-    stored_path, size = await save_upload_file(current.id, upload_file)
+    """
+    Upload flow:
+    1. Read bytes once and write to a temp file.
+    2. If image/video -> run NSFW check on temp file.
+    3. If NSFW -> block and delete temp file.
+    4. Upload temp file to Cloudinary (if configured) -> get secure_url, size
+       If Cloudinary not configured or upload fails -> fallback to local save using save_upload_file.
+    5. Create DB File record with stored_path set to secure_url (or local path) and size.
+    """
 
-    # Only run NSFW detection for images and videos.
-    # For videos, you should implement frame sampling in nsfw_check (optional).
+    # prepare
+    filename = upload_file.filename or "upload"
     content_type = (upload_file.content_type or "").lower()
 
-    # Image-only NSFW check (video optional)
-    if _is_image_content_type(content_type) or _is_video_content_type(content_type):
-        # lazy import to avoid overhead when not used
-        from app.utils.nsfw_check import predict_image, is_nsfw
+    # read bytes (consume the UploadFile stream once)
+    file_bytes = await upload_file.read()
+    file_size_local = len(file_bytes)
 
-        try:
-            # For images: is_nsfw returns bool
-            # For videos: your nsfw util should sample frames and return True if any frame flagged
-            blocked = is_nsfw(stored_path)
-        except Exception as exc:
-            # If the detector fails for an image/video, decide policy:
-            # Conservative: block -> safer but might block legitimate files.
-            # Permissive: allow -> safer UX but risk letting content through.
-            # We choose permissive for unexpected detector errors *for now* so text uploads aren't blocked,
-            # but still log the event so admins can review.
-            await log_activity(db, current.id, "nsfw_check_error", f"Detector error: {exc}")
-            blocked = False
+    if file_size_local > settings.max_upload_size_bytes:
+        raise HTTPException(status_code=400, detail="File too large")
 
-        if blocked:
-            # remove file if you want to avoid storing blocked content
-            import os
+    # write to temp file (so nsfw detector and cloud uploader work with a filesystem path)
+    suffix = ""
+    if filename:
+        _, ext = os.path.splitext(filename)
+        suffix = ext or ""
+
+    tmp = tempfile.NamedTemporaryFile(delete=False, suffix=suffix)
+    tmp_path = tmp.name
+    try:
+        tmp.write(file_bytes)
+        tmp.flush()
+        tmp.close()
+
+        # Also save a permanent local copy under uploads/<user_id>/ so we always
+        # keep a local file even when Cloudinary upload succeeds.
+        from pathlib import Path
+        owner_dir = Path(settings.upload_dir) / str(current.id)
+        owner_dir.mkdir(parents=True, exist_ok=True)
+        from uuid import uuid4
+        unique_name = f"{uuid4().hex}{suffix}"
+        dest_path = owner_dir / unique_name
+        with open(dest_path, "wb") as f:
+            f.write(file_bytes)
+        local_path = str(dest_path)
+
+        # NSFW check for images and videos (use your existing nsfw utils)
+        if _is_image_content_type(content_type) or _is_video_content_type(content_type):
             try:
-                os.remove(stored_path)
-            except Exception:
-                pass
-            await log_activity(db, current.id, "upload_blocked", f"NSFW blocked: {upload_file.filename}")
-            raise HTTPException(status_code=400, detail="Uploading NSFW content is not allowed")
+                # import here to avoid heavy imports globally
+                from app.utils.nsfw_check import predict_image, is_nsfw
+                blocked = False
+                # call is_nsfw on the local file path.
+                try:
+                    blocked = is_nsfw(local_path)
+                except Exception:
+                    # If detector fails, log error and proceed permissively
+                    await log_activity(db, current.id, "nsfw_check_error", "Detector runtime error during upload")
+                    blocked = False
 
-    # For non-image/video content, we skip NSFW check
-    f = await create_file(
-        db,
-        owner_id=current.id,
-        filename=upload_file.filename,
-        stored_path=stored_path,
-        content_type=upload_file.content_type,
-        size=size
-    )
+                if blocked:
+                    await log_activity(db, current.id, "upload_blocked", f"NSFW blocked: {filename}")
+                    raise HTTPException(status_code=400, detail="Uploading NSFW content is not allowed")
+            except HTTPException:
+                # re-raise NSFW blocking
+                raise
+            except Exception as exc:
+                # If nsfw_check import or call fails, log and move on (permissive)
+                await log_activity(db, current.id, "nsfw_check_error", f"NSFW init error: {exc}")
 
-    await log_activity(db, current.id, "upload", f"Uploaded file {f.filename}")
+        # Try Cloudinary upload (uses the local permanent copy `local_path`)
+        stored_cloud_url = None
+        size = file_size_local
+        cloud_attempted = False
 
-    return {
-        "id": f.id,
-        "filename": f.filename,
-        "size": f.size
-    }
+        if settings.cloudinary_api_key and settings.cloudinary_api_secret and settings.cloudinary_cloud_name:
+            try:
+                cloud_attempted = True
+                folder = f"{settings.cloudinary_upload_folder.rstrip('/')}/{current.id}"
+                # use resource_type='raw' for non-image/video files so Cloudinary accepts them
+                res = await upload_file_to_cloudinary(
+                    local_path,
+                    public_id=None,
+                    folder=folder,
+                    resource_type=("image" if _is_image_content_type(content_type) or _is_video_content_type(content_type) else "raw"),
+                )
+                stored_cloud_url = res.get("secure_url") or res.get("url")
+                size = int(res.get("bytes") or file_size_local or 0)
+            except Exception as exc:
+                await log_activity(db, current.id, "cloudinary_error", f"{exc}")
+                stored_cloud_url = None
+
+        # create DB record with BOTH local stored path and optional cloud URL
+        f = await create_file(
+            db,
+            owner_id=current.id,
+            filename=filename,
+            stored_path=local_path,
+            cloud_url=stored_cloud_url,
+            content_type=content_type if content_type else None,
+            size=size,
+        )
+
+        await log_activity(db, current.id, "upload", f"Uploaded file {f.filename} (cloud={'yes' if cloud_attempted and stored_cloud_url else 'no'})")
+
+        return {
+            "id": f.id,
+            "filename": f.filename,
+            "size": f.size,
+            "stored_path": f.stored_path,
+            "cloud_url": getattr(f, "cloud_url", None),
+        }
+
+    finally:
+        # ensure temp file cleanup
+        try:
+            os.unlink(tmp_path)
+        except Exception:
+            pass
 
 
 @router.post("/share")
@@ -127,7 +197,7 @@ async def share(
 
 @router.get("/usage/{owner_id}/{recipient_id}", response_model=UsageResp)
 async def get_usage(
-    owner_id: int,
+    owner_id: int,       
     recipient_id: int,
     current=Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -140,8 +210,6 @@ async def get_usage(
     res = await db.exec(q)
 
     # Compatibility-safe extraction across SQLAlchemy/SQLModel versions.
-    # Different versions expose different result APIs (scalar_one_or_none,
-    # one_or_none, scalars().first(), first()). Try them in a safe order.
     record = None
     if hasattr(res, "scalar_one_or_none"):
         try:
@@ -170,7 +238,6 @@ async def get_usage(
     return record
 
 
-
 @router.get("/download/{file_id}")
 async def download(
     file_id: int,
@@ -183,6 +250,10 @@ async def download(
 
     # owner can download
     if file_obj.owner_id == current.id:
+        # If stored_path looks like a URL (cloud), redirect or return URL
+        if str(file_obj.stored_path).startswith("http"):
+            # for cloud assets, return the URL
+            return {"url": file_obj.stored_path}
         return FileResponse(file_obj.stored_path, filename=file_obj.filename)
 
     # shared recipient can download
@@ -191,10 +262,14 @@ async def download(
         .where(FileShare.file_id == file_id, FileShare.recipient_id == current.id)
     )
     if q.scalar_one_or_none():
+        if str(file_obj.stored_path).startswith("http"):
+            return {"url": file_obj.stored_path}
         return FileResponse(file_obj.stored_path, filename=file_obj.filename)
 
     # admin can download
     if current.role == "admin":
+        if str(file_obj.stored_path).startswith("http"):
+            return {"url": file_obj.stored_path}
         return FileResponse(file_obj.stored_path, filename=file_obj.filename)
 
     raise HTTPException(status_code=403, detail="Forbidden")

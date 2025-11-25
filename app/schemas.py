@@ -29,6 +29,8 @@ class FileUploadResp(BaseModel):
     id: int
     filename: str
     size: int
+    stored_path: str
+    cloud_url: Optional[str] = None
     content_type: Optional[str]
     created_at: datetime
 

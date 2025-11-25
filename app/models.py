@@ -18,6 +18,7 @@ class File(SQLModel, table=True):
     owner_id: int = Field(foreign_key="user.id")
     filename: str
     stored_path: str
+    cloud_url: Optional[str] = None
     content_type: Optional[str] = None
     size: int = 0
     created_at: datetime = Field(default_factory=datetime.utcnow)

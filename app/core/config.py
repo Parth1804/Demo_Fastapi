@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     max_upload_size_bytes: int = int(os.environ.get("MAX_UPLOAD_SIZE_BYTES", 52428800))
 
     nsfw_detector: str = os.environ.get("NSFW_DETECTOR", "disabled")
+    cloudinary_cloud_name: str | None = None
+    cloudinary_api_key: str | None = None
+    cloudinary_api_secret: str | None = None
+    cloudinary_upload_folder: str | None = "shareledger"
 
     class Config:
         env_file = ".env"

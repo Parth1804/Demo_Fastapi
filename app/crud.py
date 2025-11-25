@@ -38,9 +38,22 @@ async def get_user_by_id(session: AsyncSession, user_id: int) -> User | None:
 # File helpers
 # -------------------------
 async def create_file(
-    session: AsyncSession, owner_id: int, filename: str, stored_path: str, content_type: str, size: int
+    session: AsyncSession,
+    owner_id: int,
+    filename: str,
+    stored_path: str,
+    content_type: str,
+    size: int,
+    cloud_url: str | None = None,
 ) -> File:
-    f = File(owner_id=owner_id, filename=filename, stored_path=stored_path, content_type=content_type, size=size)
+    f = File(
+        owner_id=owner_id,
+        filename=filename,
+        stored_path=stored_path,
+        cloud_url=cloud_url,
+        content_type=content_type,
+        size=size,
+    )
     session.add(f)
     await session.commit()
     await session.refresh(f)
